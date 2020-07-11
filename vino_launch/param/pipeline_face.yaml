@@ -3,9 +3,9 @@ Pipelines:
   inputs: [RealSenseCamera]
   infers:
     - name: ObjectDetection
-      model: /home/ai/openvino_models/models/object_detection/common/mobilenet-ssd/caffe/FP32/mobilenet-ssd.xml
+      model: /home/ai/openvino_models/models/face-detection-adas-0001/FP32/face-detection-adas-0001.xml
       engine: CPU
-      label: /home/ai/openvino_models/models/object_detection/common/mobilenet-ssd/caffe/FP32/mobilenet-ssd.labels
+      label: /home/ai/openvino_ws/src/ros_openvino_toolkit/data/labels/face_detection/face-detection-adas-0001.labels
       batch: 16
   outputs: [ImageWindow, RosTopic, RViz]
   confidence_threshold: 0.5

@@ -57,10 +57,12 @@ else()
     message(STATUS "Create Debug Build.")
 endif()
 
+set(Gflags_INCLUDE_DIRS ~/inference_engine_samples_build/thirdparty/gflags)
 include_directories (
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${Gflags_INCLUDE_DIRS}/include
   ${InferenceEngine_INCLUDE_DIRS}
   ${InferenceEngine_INCLUDE_DIRS}/../samples/build/thirdparty/gflags/include
   ${InferenceEngine_INCLUDE_DIRS}/../build/samples/thirdparty/gflags/include
