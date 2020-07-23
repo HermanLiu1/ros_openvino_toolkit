@@ -39,7 +39,7 @@ void Models::ObjectDetectionModel::setLayerProperty(
   // set output property
   InferenceEngine::OutputsDataMap output_info_map(
       net_reader->getNetwork().getOutputsInfo());
-  if (output_info_map.size() != 1) {
+  if (output_info_map.size() != 3) {
     throw std::logic_error("This sample accepts networks having only one output");
   }
   InferenceEngine::DataPtr& output_data_ptr = output_info_map.begin()->second;
@@ -55,7 +55,7 @@ void Models::ObjectDetectionModel::checkLayerProperty(
   InferenceEngine::OutputsDataMap output_info_map(
       net_reader->getNetwork().getOutputsInfo());
   slog::info << "Checking Object Detection outputs ..." << slog::endl;
-  if (output_info_map.size() != 1) {
+  if (output_info_map.size() != 3) {
     throw std::logic_error("This sample accepts networks having only one output");
   }
   InferenceEngine::DataPtr& output_data_ptr = output_info_map.begin()->second;
@@ -66,13 +66,16 @@ void Models::ObjectDetectionModel::checkLayerProperty(
       net_reader->getNetwork().getLayerByName(output_.c_str());
   // output layer should have attribute called num_classes
   slog::info << "Checking Object Detection num_classes" << slog::endl;
+  /*
   if (output_layer->params.find("num_classes") == output_layer->params.end()) {
     throw std::logic_error("Object Detection network output layer (" + output_ +
                            ") should have num_classes integer attribute");
   }
+  */
   // class number should be equal to size of label vector
   // if network has default "background" class, fake is used
-  const unsigned int num_classes = output_layer->GetParamAsInt("num_classes");
+  //const unsigned int num_classes = output_layer->GetParamAsInt("num_classes");
+  const unsigned int num_classes = 81;
 
   slog::info << "Checking Object Detection output ... num_classes=" << num_classes << slog::endl;
   if (getLabels().size() != num_classes) {
@@ -85,12 +88,13 @@ void Models::ObjectDetectionModel::checkLayerProperty(
   // last dimension of output layer should be 7
   const InferenceEngine::SizeVector output_dims =
       output_data_ptr->getTensorDesc().getDims();
-  max_proposal_count_ = static_cast<int>(output_dims[2]);
+  slog::info << "output_dims[0]:" << output_dims[0] << "output_dims[1]:" << output_dims[1] << "output_dims[2]" << output_dims[2] << slog::endl;
+  max_proposal_count_ = static_cast<int>(output_dims[2]*output_dims[3]);
   slog::info << "max proposal count is: " << max_proposal_count_ << slog::endl;
-  object_size_ = static_cast<int>(output_dims[3]);
-  if (object_size_ != 7) {
+  object_size_ = static_cast<int>(output_dims[1]);
+  if (object_size_ != 255) {
     throw std::logic_error(
-        "Object Detection network output layer should have 7 as a last "
+        "Object Detection network output layer should have 255 as a last "
         "dimension");
   }
   if (output_dims.size() != 4) {

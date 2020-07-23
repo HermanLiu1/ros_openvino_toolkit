@@ -59,6 +59,13 @@ bool vino_core_lib::ObjectDetection::enqueue(const cv::Mat& frame,
 bool vino_core_lib::ObjectDetection::submitRequest() {
   return vino_core_lib::BaseInference::submitRequest();
 }
+//进入对应的index块
+int vino_core_lib::ObjectDetection::EntryIndex(int side, int lcoords, int lclasses, int location, int entry){
+    int n = location / (side * side);
+    int loc = location % (side * side);
+    return n * side * side * (lcoords + lclasses + 1) + entry * side * side + loc;
+}
+
 bool vino_core_lib::ObjectDetection::fetchResults() {
   bool can_fetch = vino_core_lib::BaseInference::fetchResults();
   if (!can_fetch) return false;
@@ -67,29 +74,77 @@ bool vino_core_lib::ObjectDetection::fetchResults() {
   InferenceEngine::InferRequest::Ptr request = getEngine()->getRequest();
   std::string output = valid_model_->getOutputName();
   const float* detections = request->GetBlob(output)->buffer().as<float*>();
-  for (int i = 0; i < max_proposal_count_; i++) {
-    float image_id = detections[i * object_size_ + 0];
-    cv::Rect r;
-    auto label_num = static_cast<unsigned int>(detections[i * object_size_ + 1]);
-    std::vector<std::string>& labels = valid_model_->getLabels();
-    r.x = static_cast<int>(detections[i * object_size_ + 3] * width_);
-    r.y = static_cast<int>(detections[i * object_size_ + 4] * height_);
-    r.width = static_cast<int>(detections[i * object_size_ + 5] * width_ - r.x);
-    r.height =
-        static_cast<int>(detections[i * object_size_ + 6] * height_ - r.y);
-    Result result(r);
-    result.label_ = label_num < labels.size()
+
+  //get required parameter
+  int num = 3;
+  int coords = 4;
+  int classes = 80;
+  std::vector<float> anchors = { 30.0, 61.0, 62.0, 45.0, 59.0, 119.0};
+  int side =26;
+  int side_square = side * side;
+  int resized_im_w = 416;
+  int resized_im_h = 416;
+  double threshold = 0.1;
+  double x, y, width, height;
+  float w_scale = static_cast<float>(width_) / static_cast<float>(resized_im_w);               
+  float h_scale = static_cast<float>(height_) / static_cast<float>(resized_im_h);
+  int label_num = 0;
+  cv::Rect r;
+  std::vector<std::string>& labels = valid_model_->getLabels();
+  /*
+  if (anchors.size() == 18) {        // YoloV3
+    switch (side) {
+        case yolo_scale_13:
+            anchor_offset = 2 * 6;
+            break;
+        case yolo_scale_26:
+            anchor_offset = 2 * 3;
+            break;
+        case yolo_scale_52:
+            anchor_offset = 2 * 0;
+            break;
+        default:
+            throw std::runtime_error("Invalid output size");
+    }
+  */
+  InferenceEngine::Blob::Ptr blob = request->GetBlob(output);
+  const int out_blob_h = static_cast<int>(blob->getTensorDesc().getDims()[2]);
+  const int out_blob_w = static_cast<int>(blob->getTensorDesc().getDims()[3]);
+  slog::info << "out_blob_h: " << out_blob_h << " out_blob_w" << out_blob_w << slog::endl;
+
+  //refer for these code
+
+  for (int i = 0; i < side_square; ++i) {
+    int row = i / side;
+    int col = i % side;
+    for (int n = 0; n < num; ++n) {
+        int obj_index = EntryIndex(side, coords, classes, n * side * side + i, coords);
+        int box_index = EntryIndex(side, coords, classes, n * side * side + i, 0);
+        float scale = detections[obj_index];
+        if (scale < threshold)
+            continue;
+        x = (col + detections[box_index + 0 * side_square]) / side * resized_im_w;
+        y = (row + detections[box_index + 1 * side_square]) / side * resized_im_h;
+        height = std::exp(detections[box_index + 3 * side_square]) * anchors[2 * n + 1];
+        width = std::exp(detections[box_index + 2 * side_square]) * anchors[2 * n];
+        for (int j = 0; j < classes; ++j) {
+            int class_index = EntryIndex(side, coords, classes, n * side_square + i, coords + 1 + j);
+            float prob = scale * detections[class_index];
+            if (prob < threshold)
+                continue;
+            r.x = static_cast<int>((x - width / 2) * w_scale);
+            r.y = static_cast<int>((y - height / 2) * h_scale);
+            r.width = static_cast<int>(width * w_scale);
+            r.height = static_cast<int>(height * h_scale);
+            Result result(r);
+            label_num = j;
+            result.label_ = label_num < 80
                         ? labels[label_num]
                         : std::string("label #") + std::to_string(label_num);
-    result.confidence_ = detections[i * object_size_ + 2];
-    if (result.confidence_ <= show_output_thresh_) {
-      continue;
+            found_result = true;
+            results_.emplace_back(result);
+        }
     }
-    if (image_id < 0) {
-      break;
-    }
-    found_result = true;
-    results_.emplace_back(result);
   }
   if (!found_result) results_.clear();
   return true;

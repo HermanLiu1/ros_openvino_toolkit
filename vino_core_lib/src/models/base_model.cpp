@@ -82,10 +82,12 @@ void Models::BaseModel::checkNetworkSize(
   slog::info << "Checking output size" << slog::endl;
   InferenceEngine::OutputsDataMap output_info(
       net_reader->getNetwork().getOutputsInfo());
+ /*
   if (output_info.size() != output_size)
   {
     throw std::logic_error(getModelName() +
                            "network should have only one output");
   }
+  */
   // InferenceEngine::DataPtr& output_data_ptr = output_info.begin()->second;
 }

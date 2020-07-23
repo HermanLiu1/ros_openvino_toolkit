@@ -1,0 +1,22 @@
+Pipelines:
+- name: object
+  inputs: [RealSenseCamera]
+  infers:
+    - name: ObjectDetection
+      model: /home/ai/openvino_models/models/YOLOV3/yolov3_model.xml
+      engine: CPU
+      label: /home/ai/openvino_models/models/YOLOV3/yolov3_model.labels
+      batch: 16
+  outputs: [ImageWindow, RosTopic, RViz]
+  confidence_threshold: 0.5
+  connects:
+    - left: RealSenseCamera
+      right: [ObjectDetection]
+    - left: ObjectDetection
+      right: [ImageWindow]
+    - left: ObjectDetection
+      right: [RosTopic]
+    - left: ObjectDetection
+      right: [RViz]
+
+OpenvinoCommon:

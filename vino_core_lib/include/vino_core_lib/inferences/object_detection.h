@@ -29,6 +29,7 @@
 #include "vino_core_lib/engines/engine.h"
 #include "vino_core_lib/inferences/base_inference.h"
 #include "inference_engine.hpp"
+
 #include "opencv2/opencv.hpp"
 // namespace
 namespace vino_core_lib {
@@ -77,6 +78,11 @@ class ObjectDetection : public BaseInference {
    * @return Whether this operation is successful.
    */
   bool submitRequest() override;
+  /**
+   * @brief Entry objectindex, boxindex, classindex.
+   * @return int index.
+   */  
+  int EntryIndex(int side, int lcoords, int lclasses, int location, int entry);
   /**
    * @brief This function will fetch the results of the previous inference and
    * stores the results in a result buffer array. All buffered frames will be
